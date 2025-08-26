@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Webhook</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #059669;
+        }
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 6px;
+        }
+        .success {
+            background: #d1fae5;
+            border: 1px solid #10b981;
+            color: #065f46;
+        }
+        .error {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #991b1b;
+        }
+        .loading {
+            background: #dbeafe;
+            border: 1px solid #3b82f6;
+            color: #1e40af;
+        }
+        pre {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste de Webhook - Sistema de Notas Fiscais</h1>
+        <p>Esta página testa a funcionalidade de exportação para webhook implementada no sistema.</p>
+        
+        <div>
+            <button onclick="testWebhook()" id="testBtn">
+                🚀 Testar Webhook
+            </button>
+            <button onclick="clearStatus()">
+                🗑️ Limpar Status
+            </button>
+        </div>
+        
+        <div id="status"></div>
+        
+        <h3>📋 Dados de Teste</h3>
+        <p>Serão enviados os seguintes dados de exemplo:</p>
+        <pre id="testData"></pre>
+    </div>
+
+    <script>
+        // Dados de teste simulando notas fiscais
+        const testData = [
+            {
+                natureza: "Serviço administrativos com retido - dentro do estado",
+                dataEmissao: "15/12/2024",
+                dataEntrada: "15/12/2024",
+                numeroNota: "001",
+                inscricaoFederal: "12.345.678/0001-90",
+                razaoSocial: "Empresa Teste LTDA",
+                cfopNatureza: "1933023",
+                valorPrincipal: 1000.00,
+                inssRetid: 110.00,
+                issRetid: 50.00,
+                pisRetid: 6.50,
+                cofinsRetid: 30.00,
+                csRetid: 0.00,
+                irRetid: 150.00,
+                valorLiquido: 653.50,
+                tabelaCtb: "2003"
+            },
+            {
+                natureza: "Serviço despesas médicas com retido - dentro do estado",
+                dataEmissao: "16/12/2024",
+                dataEntrada: "16/12/2024",
+                numeroNota: "002",
+                inscricaoFederal: "98.765.432/0001-10",
+                razaoSocial: "Clínica Médica Exemplo",
+                cfopNatureza: "1933026",
+                valorPrincipal: 2500.00,
+                inssRetid: 275.00,
+                issRetid: 125.00,
+                pisRetid: 16.25,
+                cofinsRetid: 75.00,
+                csRetid: 0.00,
+                irRetid: 375.00,
+                valorLiquido: 1633.75,
+                tabelaCtb: "2006"
+            }
+        ];
+
+        // Mostra os dados de teste na página
+        document.getElementById('testData').textContent = JSON.stringify(testData, null, 2);
+
+        async function testWebhook() {
+            const button = document.getElementById('testBtn');
+            const statusDiv = document.getElementById('status');
+            
+            // Desabilita o botão e mostra status de carregamento
+            button.disabled = true;
+            button.innerHTML = '⏳ Enviando...';
+            
+            statusDiv.innerHTML = '<div class="status loading">🔄 Enviando dados para o webhook...</div>';
+            
+                         try {
+                 const webhookUrl = 'https://dadosbi.monkeybranch.com.br/webhook/3af7dec8-78d6-4858-aaff-a9669f2129a0';
+                
+                // Prepara os dados para envio
+                const webhookData = {
+                    timestamp: new Date().toISOString(),
+                    totalRegistros: testData.length,
+                    dados: testData
+                };
+
+                console.log('Enviando dados para webhook:', webhookUrl);
+                console.log('Dados preparados:', webhookData);
+
+                // Faz a requisição POST para o webhook
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'User-Agent': 'Sistema-Notas-Fiscais-Questor/1.0'
+                    },
+                    mode: 'cors',
+                    body: JSON.stringify(webhookData)
+                });
+
+                console.log('Resposta do webhook:', response.status, response.statusText);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Erro na resposta:', errorText);
+                    throw new Error(`Erro HTTP: ${response.status} - ${response.statusText}. Detalhes: ${errorText}`);
+                }
+
+                let result;
+                try {
+                    result = await response.json();
+                } catch (parseError) {
+                    result = { message: await response.text() };
+                }
+
+                console.log('Resposta processada:', result);
+
+                // Mostra sucesso
+                statusDiv.innerHTML = `
+                    <div class="status success">
+                        ✅ <strong>Sucesso!</strong> Dados enviados para o webhook.
+                        <br><br>
+                        <strong>Resposta do servidor:</strong>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Erro ao testar webhook:', error);
+                
+                // Mensagem de erro detalhada
+                let userMessage = error.message;
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    userMessage = 'Erro de conexão. Verifique se o webhook está acessível.';
+                } else if (error.message.includes('CORS')) {
+                    userMessage = 'Erro de CORS. O webhook não permite requisições deste domínio.';
+                } else if (error.message.includes('Failed to fetch')) {
+                    userMessage = 'Falha na conexão com o webhook. Verifique a URL e conectividade.';
+                }
+                
+                statusDiv.innerHTML = `
+                    <div class="status error">
+                        ❌ <strong>Erro!</strong> ${userMessage}
+                        <br><br>
+                        <strong>Detalhes técnicos:</strong>
+                        <pre>${error.message}</pre>
+                        <br>
+                        <strong>Verifique:</strong>
+                        <ul>
+                            <li>Se o webhook está acessível</li>
+                            <li>Se há conectividade com a internet</li>
+                            <li>Se a URL está correta</li>
+                            <li>Se há problemas de CORS</li>
+                        </ul>
+                    </div>
+                `;
+            } finally {
+                // Restaura o botão
+                button.disabled = false;
+                button.innerHTML = '🚀 Testar Webhook';
+            }
+        }
+
+        function clearStatus() {
+            document.getElementById('status').innerHTML = '';
+        }
+    </script>
+</body>
+</html>

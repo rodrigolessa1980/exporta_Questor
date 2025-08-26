@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Simples de Webhook</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            width: 100%;
+        }
+        button:hover {
+            background: #059669;
+        }
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 6px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success { background: #d1fae5; border: 1px solid #10b981; color: #065f46; }
+        .error { background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; }
+        .loading { background: #dbeafe; border: 1px solid #3b82f6; color: #1e40af; }
+        .info { background: #f3f4f6; border: 1px solid #6b7280; color: #374151; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste Simples de Webhook</h1>
+        <p>Este teste verifica se o webhook está acessível e funcionando.</p>
+        
+        <button onclick="testWebhook()" id="testBtn">
+            🚀 Testar Webhook
+        </button>
+        
+        <button onclick="clearStatus()">
+            🗑️ Limpar Status
+        </button>
+        
+        <div id="status"></div>
+    </div>
+
+    <script>
+        async function testWebhook() {
+            const button = document.getElementById('testBtn');
+            const statusDiv = document.getElementById('status');
+            
+            // Desabilita o botão e mostra status de carregamento
+            button.disabled = true;
+            button.innerHTML = '⏳ Testando...';
+            
+            statusDiv.innerHTML = '<div class="status loading">🔄 Testando conectividade com o webhook...</div>';
+            
+            try {
+                const webhookUrl = 'https://dadosbi.monkeybranch.com.br/webhook/3af7dec8-78d6-4858-aaff-a9669f2129a0';
+                
+                // Dados de teste simples
+                const testData = {
+                    timestamp: new Date().toISOString(),
+                    totalRegistros: 1,
+                    dados: [{
+                        natureza: "Teste de conectividade",
+                        dataEmissao: "17/12/2024",
+                        numeroNota: "TESTE-001",
+                        valorPrincipal: 100.00
+                    }]
+                };
+
+                console.log('=== TESTE DE WEBHOOK ===');
+                console.log('URL:', webhookUrl);
+                console.log('Dados de teste:', testData);
+
+                // Testa primeiro com uma requisição simples
+                statusDiv.innerHTML = '<div class="status info">📡 Fazendo requisição POST para o webhook...</div>';
+                
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'User-Agent': 'Sistema-Notas-Fiscais-Questor/1.0'
+                    },
+                    mode: 'cors',
+                    body: JSON.stringify(testData)
+                });
+
+                console.log('Resposta recebida:', response.status, response.statusText);
+                console.log('Headers:', Object.fromEntries(response.headers.entries()));
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Erro HTTP:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}\nResposta: ${errorText}`);
+                }
+
+                let result;
+                try {
+                    result = await response.json();
+                    console.log('Resposta JSON:', result);
+                } catch (parseError) {
+                    result = { message: await response.text() };
+                    console.log('Resposta como texto:', result);
+                }
+
+                // Sucesso!
+                statusDiv.innerHTML = `
+                    <div class="status success">
+                        ✅ <strong>SUCESSO!</strong> Webhook está funcionando!
+                        
+                        Status: ${response.status} ${response.statusText}
+                        Resposta: ${JSON.stringify(result, null, 2)}
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Erro no teste:', error);
+                
+                let errorMessage = 'Erro desconhecido';
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    errorMessage = 'Erro de conexão - verifique se o webhook está acessível';
+                } else if (error.message.includes('CORS')) {
+                    errorMessage = 'Erro de CORS - o servidor não permite requisições deste domínio';
+                } else if (error.message.includes('Failed to fetch')) {
+                    errorMessage = 'Falha na conexão - verifique URL e conectividade';
+                } else if (error.message.includes('net::ERR_')) {
+                    errorMessage = 'Erro de rede - verifique conectividade com a internet';
+                } else {
+                    errorMessage = error.message;
+                }
+                
+                statusDiv.innerHTML = `
+                    <div class="status error">
+                        ❌ <strong>ERRO:</strong> ${errorMessage}
+                        
+                        Detalhes técnicos:
+                        ${error.message}
+                        
+                        Stack trace:
+                        ${error.stack}
+                    </div>
+                `;
+            } finally {
+                // Restaura o botão
+                button.disabled = false;
+                button.innerHTML = '🚀 Testar Webhook';
+            }
+        }
+
+        function clearStatus() {
+            document.getElementById('status').innerHTML = '';
+        }
+
+        // Teste automático ao carregar a página
+        window.addEventListener('load', () => {
+            console.log('Página carregada. Webhook URL:', 'https://dadosbi.monkeybranch.com.br/webhook/3af7dec8-78d6-4858-aaff-a9669f2129a0');
+        });
+    </script>
+</body>
+</html>

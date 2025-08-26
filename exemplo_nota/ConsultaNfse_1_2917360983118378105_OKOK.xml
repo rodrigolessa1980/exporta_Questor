@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ConsultarNfseResposta xmlns="http://www.publica.inf.br" xmlns:ns2="http://www.w3.org/2000/09/xmldsig#" xmlns:ns3="http://www.publica.inf.br/integracao_nfse">
+    <ListaNfse>
+        <CompNfse>
+            <Nfse>
+                <InfNfse id="43500274">
+                    <Numero>202500000036925</Numero>
+                    <Serie>A1</Serie>
+                    <CodigoVerificacao>JWX1-I98M</CodigoVerificacao>
+                    <DataEmissao>2025-08-01T10:17:00</DataEmissao>
+                    <NaturezaOperacao>101</NaturezaOperacao>
+                    <OptanteSimplesNacional>2</OptanteSimplesNacional>
+                    <IncentivadorCultural>1</IncentivadorCultural>
+                    <Competencia>2025-08</Competencia>
+                    <OutrasInformacoes>- Consulte a autenticidade desta Nota Fiscal no portal da NFS-e de Itajaí: http://nfse.itajai.sc.gov.br/
+- Documento Fiscal emitido por contribuinte NÃO optante pelo Simples Nacional</OutrasInformacoes>
+                    <Servico>
+                        <Valores>
+                            <ValorServicos>12739.83000</ValorServicos>
+                            <ValorDeducoes>0.00000</ValorDeducoes>
+                            <ValorPis>0.00000</ValorPis>
+                            <ValorCofins>0.00000</ValorCofins>
+                            <ValorInss>0.00000</ValorInss>
+                            <ValorIr>0.00000</ValorIr>
+                            <ValorCsll>0.00000</ValorCsll>
+                            <IssRetido>2</IssRetido>
+                            <ValorIss>254.79660</ValorIss>
+                            <ValorIssRetido>0.00000</ValorIssRetido>
+                            <OutrasRetencoes>0.00000</OutrasRetencoes>
+                            <BaseCalculo>12739.83000</BaseCalculo>
+                            <Aliquota>2.00000</Aliquota>
+                            <ValorLiquidoNfse>12739.83000</ValorLiquidoNfse>
+                            <DescontoIncondicionado>0.00000</DescontoIncondicionado>
+                            <DescontoCondicionado>0.00000</DescontoCondicionado>
+                        </Valores>
+                        <ItemListaServico>401</ItemListaServico>
+                        <Discriminacao>Referente aos exames realizados em JULHO.</Discriminacao>
+                        <InformacoesComplementares></InformacoesComplementares>
+                        <CodigoMunicipio>4208203</CodigoMunicipio>
+                    </Servico>
+                    <PrestadorServico>
+                        <IdentificacaoPrestador>
+                            <Cnpj>03567180000267</Cnpj>
+                            <InscricaoMunicipal>285202</InscricaoMunicipal>
+                        </IdentificacaoPrestador>
+                        <RazaoSocial>SMT SEGURANÇA E MEDICINA DO TRABALHO LTDA</RazaoSocial>
+                        <Endereco>
+                            <Endereco>MINISTRO VICTOR KONDER</Endereco>
+                            <Numero>336</Numero>
+                            <Bairro>CENTRO</Bairro>
+                            <CodigoMunicipio>4208203</CodigoMunicipio>
+                            <Uf>SC</Uf>
+                            <Cep>88301701</Cep>
+                        </Endereco>
+                        <Contato/>
+                    </PrestadorServico>
+                    <TomadorServico>
+                        <IdentificacaoTomador>
+                            <CpfCnpj>
+<Cnpj>58765757000156</Cnpj>
+                            </CpfCnpj>
+                            <InscricaoMunicipal>354468</InscricaoMunicipal>
+                        </IdentificacaoTomador>
+                        <InscricaoMunicipal>354468</InscricaoMunicipal>
+                        <RazaoSocial>SWL CONSTRUTORA LTDA</RazaoSocial>
+                        <NomeFantasia>SWL CONSTRUTORA LTDA</NomeFantasia>
+                        <Endereco>
+                            <Endereco>BR 101</Endereco>
+                            <Numero>8025</Numero>
+                            <Complemento>:SALA 04</Complemento>
+                            <Bairro>SAO VICENTE</Bairro>
+                            <CodigoMunicipio>4208203</CodigoMunicipio>
+                            <Uf>SC</Uf>
+                            <Cep>88312501</Cep>
+                        </Endereco>
+                        <Contato>
+                            <Telefone>91590986            </Telefone>
+                            <Email>fiscal@wsa.adm.br</Email>
+                        </Contato>
+                    </TomadorServico>
+                    <OrgaoGerador>
+                        <CodigoMunicipio>4208203</CodigoMunicipio>
+                        <Uf>SC</Uf>
+                    </OrgaoGerador>
+                    <LinkVisualizacaoNfse>https://nfse.itajai.sc.gov.br/nfse_integracao/NFES?bmV3=ede4f6ba5e7fd9701767620b10f19cf41b213f7593c9145d23181be9d0c1eb7d005a10e4b50c44d145bcfe56d3fb97bc93c5a2f47fb0bc8b0519142f81c6ec6311b3b4fd687c22b45d345792215a88dd12042026cbb5187f57762def48deded1fdc6efb073bba6a53ad4e168c2e458f4365e51a7ef82be93a1262a23258ddbdc</LinkVisualizacaoNfse>
+                </InfNfse>
+            </Nfse>
+            <NfseCancelamento/>
+        </CompNfse>
+    </ListaNfse>
+</ConsultarNfseResposta>

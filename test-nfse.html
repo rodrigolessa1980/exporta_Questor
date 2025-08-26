@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste NFSe - Processamento</title>
+</head>
+<body>
+    <h1>Teste de Processamento NFSe</h1>
+    
+    <div id="result"></div>
+    
+    <script type="module">
+        // Simula o processamento do arquivo NFSe
+        const xmlContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ConsultarNfseResposta xmlns="http://www.publica.inf.br" xmlns:ns2="http://www.w3.org/2000/09/xmldsig#" xmlns:ns3="http://www.publica.inf.br/integracao_nfse">
+    <ListaNfse>
+        <CompNfse>
+            <Nfse>
+                <InfNfse id="43500274">
+                    <Numero>202500000036925</Numero>
+                    <Serie>A1</Serie>
+                    <CodigoVerificacao>JWX1-I98M</CodigoVerificacao>
+                    <DataEmissao>2025-08-01T10:17:00</DataEmissao>
+                    <NaturezaOperacao>101</NaturezaOperacao>
+                    <OptanteSimplesNacional>2</OptanteSimplesNacional>
+                    <IncentivadorCultural>1</IncentivadorCultural>
+                    <Competencia>2025-08</Competencia>
+                    <OutrasInformacoes>- Consulte a autenticidade desta Nota Fiscal no portal da NFS-e de Itajaí: http://nfse.itajai.sc.gov.br/
+- Documento Fiscal emitido por contribuinte NÃO optante pelo Simples Nacional</OutrasInformacoes>
+                    <Servico>
+                        <Valores>
+                            <ValorServicos>12739.83000</ValorServicos>
+                            <ValorDeducoes>0.00000</ValorDeducoes>
+                            <ValorPis>0.00000</ValorPis>
+                            <ValorCofins>0.00000</ValorCofins>
+                            <ValorInss>0.00000</ValorInss>
+                            <ValorIr>0.00000</ValorIr>
+                            <ValorCsll>0.00000</ValorCsll>
+                            <IssRetido>2</IssRetido>
+                            <ValorIss>254.79660</ValorIss>
+                            <ValorIssRetido>0.00000</ValorIssRetido>
+                            <OutrasRetencoes>0.00000</OutrasRetencoes>
+                            <BaseCalculo>12739.83000</BaseCalculo>
+                            <Aliquota>2.00000</Aliquota>
+                            <ValorLiquidoNfse>12739.83000</ValorLiquidoNfse>
+                            <DescontoIncondicionado>0.00000</DescontoIncondicionado>
+                            <DescontoCondicionado>0.00000</DescontoCondicionado>
+                        </Valores>
+                        <ItemListaServico>401</ItemListaServico>
+                        <Discriminacao>Referente aos exames realizados em JULHO.</Discriminacao>
+                        <InformacoesComplementares></InformacoesComplementares>
+                        <CodigoMunicipio>4208203</CodigoMunicipio>
+                    </Servico>
+                    <PrestadorServico>
+                        <IdentificacaoPrestador>
+                            <Cnpj>03567180000267</Cnpj>
+                            <InscricaoMunicipal>285202</InscricaoMunicipal>
+                        </IdentificacaoPrestador>
+                        <RazaoSocial>SMT SEGURANÇA E MEDICINA DO TRABALHO LTDA</RazaoSocial>
+                        <Endereco>
+                            <Endereco>MINISTRO VICTOR KONDER</Endereco>
+                            <Numero>336</Numero>
+                            <Bairro>CENTRO</Bairro>
+                            <CodigoMunicipio>4208203</CodigoMunicipio>
+                            <Uf>SC</Uf>
+                            <Cep>88301701</Cep>
+                        </Endereco>
+                        <Contato/>
+                    </PrestadorServico>
+                    <TomadorServico>
+                        <IdentificacaoTomador>
+                            <CpfCnpj>
+<Cnpj>58765757000156</Cnpj>
+                            </CpfCnpj>
+                            <InscricaoMunicipal>354468</InscricaoMunicipal>
+                        </IdentificacaoTomador>
+                        <InscricaoMunicipal>354468</InscricaoMunicipal>
+                        <RazaoSocial>SWL CONSTRUTORA LTDA</RazaoSocial>
+                        <NomeFantasia>SWL CONSTRUTORA LTDA</NomeFantasia>
+                        <Endereco>
+                            <Endereco>BR 101</Endereco>
+                            <Numero>8025</Numero>
+                            <Complemento>:SALA 04</Complemento>
+                            <Bairro>SAO VICENTE</Bairro>
+                            <CodigoMunicipio>4208203</CodigoMunicipio>
+                            <Uf>SC</Uf>
+                            <Cep>88312501</Cep>
+                        </Endereco>
+                        <Contato>
+                            <Telefone>91590986            </Telefone>
+                            <Email>fiscal@wsa.adm.br</Email>
+                        </Contato>
+                    </TomadorServico>
+                    <OrgaoGerador>
+                        <CodigoMunicipio>4208203</CodigoMunicipio>
+                        <Uf>SC</Uf>
+                    </OrgaoGerador>
+                    <LinkVisualizacaoNfse>https://nfse.itajai.sc.gov.br/nfse_integracao/NFES?bmV3=ede4f6ba5e7fd9701767620b10f19cf41b213f7593c9145d23181be9d0c1eb7d005a10e4b50c44d145bcfe56d3fb97bc93c5a2f47fb0bc8b0519142f81c6ec6311b3b4fd687c22b45d345792215a88dd12042026cbb5187f57762def48deded1fdc6efb073bba6a53ad4e168c2e458f4365e51a7ef82be93a1262a23258ddbdc</LinkVisualizacaoNfse>
+                </InfNfse>
+            </Nfse>
+            <NfseCancelamento/>
+        </CompNfse>
+    </ListaNfse>
+</ConsultarNfseResposta>`;
+
+        // Simula o processamento
+        try {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
+            
+            // Detecta o tipo de arquivo XML
+            let xmlType = null;
+            let rootElement = null;
+            
+            // Verifica se é NFe
+            if (xmlDoc.querySelector('nfeProc NFe infNFe') || 
+                xmlDoc.querySelector('NFe infNFe') ||
+                xmlDoc.querySelector('infNFe')) {
+                xmlType = 'NFe';
+                rootElement = xmlDoc.querySelector('nfeProc NFe infNFe') || 
+                             xmlDoc.querySelector('NFe infNFe') ||
+                             xmlDoc.querySelector('infNFe');
+            }
+            // Verifica se é NFSe
+            else if (xmlDoc.querySelector('ConsultarNfseResposta ListaNfse CompNfse Nfse InfNfse') ||
+                     xmlDoc.querySelector('ListaNfse CompNfse Nfse InfNfse') ||
+                     xmlDoc.querySelector('CompNfse Nfse InfNfse') ||
+                     xmlDoc.querySelector('InfNfse')) {
+                xmlType = 'NFSe';
+                rootElement = xmlDoc.querySelector('ConsultarNfseResposta ListaNfse CompNfse Nfse InfNfse') ||
+                             xmlDoc.querySelector('ListaNfse CompNfse Nfse InfNfse') ||
+                             xmlDoc.querySelector('CompNfse Nfse InfNfse') ||
+                             xmlDoc.querySelector('InfNfse');
+            }
+            
+            if (!rootElement) {
+                throw new Error('Estrutura XML inválida - arquivo deve ser uma NFe (Nota Fiscal Eletrônica) ou NFSe (Nota Fiscal de Serviços Eletrônica) válida');
+            }
+            
+            // Função helper para extrair texto de elementos
+            const getElementText = (parent, tagName) => {
+                const element = parent.querySelector(tagName);
+                return element ? element.textContent.trim() : '';
+            };
+            
+            let processedData;
+            
+            if (xmlType === 'NFSe') {
+                // Processa NFSe
+                const servico = rootElement.querySelector('Servico');
+                const prestador = rootElement.querySelector('PrestadorServico');
+                const tomador = rootElement.querySelector('TomadorServico');
+                const valores = servico ? servico.querySelector('Valores') : null;
+                
+                const natureza = getElementText(rootElement, 'NaturezaOperacao');
+                const cfop = getElementText(servico, 'ItemListaServico');
+                
+                processedData = {
+                    natureza: natureza,
+                    dataEmissao: getElementText(rootElement, 'DataEmissao') ? new Date(getElementText(rootElement, 'DataEmissao')).toISOString() : '',
+                    dataEntrada: getElementText(rootElement, 'DataEmissao') ? new Date(getElementText(rootElement, 'DataEmissao')).toISOString() : '',
+                    numeroNota: getElementText(rootElement, 'Numero'),
+                    inscricaoFederal: getElementText(tomador, 'Cnpj') || getElementText(tomador, 'Cpf'),
+                    razaoSocial: getElementText(tomador, 'RazaoSocial'),
+                    cfop: cfop,
+                    cfopNatureza: cfop,
+                    tabelaCtb: '',
+                    valorPrincipal: parseFloat(getElementText(valores, 'ValorServicos') || '0'),
+                    inssRetid: parseFloat(getElementText(valores, 'ValorInss') || '0'),
+                    issRetid: parseFloat(getElementText(valores, 'ValorIss') || '0'),
+                    pisRetid: parseFloat(getElementText(valores, 'ValorPis') || '0'),
+                    cofinsRetid: parseFloat(getElementText(valores, 'ValorCofins') || '0'),
+                    csRetid: parseFloat(getElementText(valores, 'ValorCsll') || '0'),
+                    irRetid: parseFloat(getElementText(valores, 'ValorIr') || '0'),
+                    valorLiquido: parseFloat(getElementText(valores, 'ValorLiquidoNfse') || '0')
+                };
+            }
+            
+            document.getElementById('result').innerHTML = `
+                <h2>✅ Arquivo NFSe processado com sucesso!</h2>
+                <p><strong>Tipo:</strong> ${xmlType}</p>
+                <p><strong>Natureza:</strong> ${processedData.natureza}</p>
+                <p><strong>Número:</strong> ${processedData.numeroNota}</p>
+                <p><strong>Razão Social:</strong> ${processedData.razaoSocial}</p>
+                <p><strong>Valor Principal:</strong> R$ ${processedData.valorPrincipal.toFixed(2)}</p>
+                <p><strong>Valor Líquido:</strong> R$ ${processedData.valorLiquido.toFixed(2)}</p>
+                <p><strong>ISS Retido:</strong> R$ ${processedData.issRetid.toFixed(2)}</p>
+            `;
+            
+        } catch (error) {
+            document.getElementById('result').innerHTML = `
+                <h2>❌ Erro ao processar arquivo</h2>
+                <p><strong>Erro:</strong> ${error.message}</p>
+            `;
+        }
+    </script>
+</body>
+</html>
