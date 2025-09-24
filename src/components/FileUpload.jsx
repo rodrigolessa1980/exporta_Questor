@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { cn } from '../lib/utils';
 
-const FileUpload = ({ onFilesSelected, acceptedFileTypes = '.xml,.xlsx,.xls' }) => {
+const FileUpload = ({ onFilesSelected, acceptedFileTypes = '.xml,.xlsx,.xls,.pdf' }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
 
@@ -34,7 +34,7 @@ const FileUpload = ({ onFilesSelected, acceptedFileTypes = '.xml,.xlsx,.xls' }) 
   const handleFiles = useCallback((files) => {
     const validFiles = files.filter(file => {
       const extension = file.name.toLowerCase().split('.').pop();
-      return ['xml', 'xlsx', 'xls'].includes(extension);
+      return ['xml', 'xlsx', 'xls', 'pdf'].includes(extension);
     });
 
     if (validFiles.length > 0) {
@@ -80,7 +80,7 @@ const FileUpload = ({ onFilesSelected, acceptedFileTypes = '.xml,.xlsx,.xls' }) 
                 ou clique para selecionar arquivos
               </p>
               <p className="text-xs text-muted-foreground">
-                Formatos aceitos: XML (NFe/NFSe), Excel (.xlsx, .xls)
+                Formatos aceitos: XML (NFe/NFSe), Excel (.xlsx, .xls), PDF
               </p>
             </div>
             <Button

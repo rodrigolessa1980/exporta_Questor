@@ -1,5 +1,7 @@
 import * as XLSX from 'xlsx';
 import { findNaturezaMapping } from '../data/natureza-mapping';
+import { addPdfToQueue, getQueueStatus, clearQueue } from './pdfQueue';
+import parseNfseText from './textParsers';
 
 // Função para processar arquivos Excel
 export const processExcelFile = async (file) => {
@@ -527,4 +529,205 @@ export const exportToWebhook = async (data, webhookUrl) => {
     console.error('Mensagem de erro para o usuário:', userMessage);
     throw new Error(userMessage);
   }
+};
+
+// Normaliza a resposta do webhook para o formato interno de nota(s)
+export const normalizeWebhookResponse = (responseData) => {
+  try {
+    let data = responseData;
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data);
+      } catch {
+        // Não é JSON válido
+        return [];
+      }
+    }
+
+    // Helper para extrair payload útil de diferentes formatos
+    const extractPayloadFromEntry = (entry) => {
+      if (!entry || typeof entry !== 'object') return entry;
+      if (entry.output && typeof entry.output === 'object') return entry.output;
+      if (entry.message && typeof entry.message === 'object') {
+        if (entry.message.content && typeof entry.message.content === 'object') return entry.message.content;
+        if (entry.message.output && typeof entry.message.output === 'object') return entry.message.output;
+      }
+      if (entry.content && typeof entry.content === 'object') return entry.content;
+      return entry;
+    };
+
+    // Caso venha como um array de itens (ex.: [{ output: { ... } }])
+    if (Array.isArray(data)) {
+      const payloads = data
+        .map(extractPayloadFromEntry)
+        .flatMap(p => Array.isArray(p) ? p : [p]);
+      return payloads.map((p) => {
+        // Se vier como { text: "..." }, tenta parsear por regex
+        if (p && typeof p === 'object' && typeof p.text === 'string') {
+          const parsed = parseNfseText(p.text);
+          return normalizeSingleWebhookItem(parsed);
+        }
+        return normalizeSingleWebhookItem(p);
+      }).filter(Boolean);
+    }
+
+    // Caso venha no formato { dados: [...] }
+    if (data && Array.isArray(data.dados)) {
+      return data.dados.map((item) => normalizeSingleWebhookItem(item));
+    }
+
+    // Caso venha no formato { output: { ... } }
+    if (data && typeof data === 'object' && data.output) {
+      const p = data.output;
+      if (p && typeof p === 'object' && typeof p.text === 'string') {
+        const parsed = parseNfseText(p.text);
+        return [normalizeSingleWebhookItem(parsed)];
+      }
+      return [normalizeSingleWebhookItem(p)];
+    }
+
+    // Caso venha no formato { message: { content: { ... } } }
+    if (data && typeof data === 'object' && data.message && typeof data.message === 'object') {
+      const payload = (data.message.content && typeof data.message.content === 'object')
+        ? data.message.content
+        : (data.message.output && typeof data.message.output === 'object')
+          ? data.message.output
+          : data.message;
+      if (payload && typeof payload === 'object' && typeof payload.text === 'string') {
+        const parsed = parseNfseText(payload.text);
+        return [normalizeSingleWebhookItem(parsed)];
+      }
+      return [normalizeSingleWebhookItem(payload)];
+    }
+
+    // Caso venha no formato { content: { ... } }
+    if (data && typeof data === 'object' && data.content && typeof data.content === 'object') {
+      const payload = data.content;
+      if (payload && typeof payload === 'object' && typeof payload.text === 'string') {
+        const parsed = parseNfseText(payload.text);
+        return [normalizeSingleWebhookItem(parsed)];
+      }
+      return [normalizeSingleWebhookItem(payload)];
+    }
+
+    // Caso venha como um único objeto plano
+    if (data && typeof data === 'object') {
+      return [normalizeSingleWebhookItem(data)];
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Erro ao normalizar resposta do webhook:', error);
+    return [];
+  }
+};
+
+// Normaliza um único item do webhook
+const normalizeSingleWebhookItem = (item) => {
+  if (!item || typeof item !== 'object') return null;
+
+  // Preferir dados do tomador quando disponíveis
+  const razaoSocialFinal = item.razaoSocialTomador || item.razaoSocial || '';
+  const inscricaoFederalFinal = item.inscricaoFederalTomador || item.inscricaoFederal || '';
+
+  const normalized = {
+    natureza: item.natureza || '',
+    dataEmissao: item.dataEmissao || '',
+    dataEntrada: item.dataEntrada || '',
+    numeroNota: item.numeroNota || '',
+    inscricaoFederal: inscricaoFederalFinal,
+    razaoSocial: razaoSocialFinal,
+    cfop: item.cfop || '',
+    cfopNatureza: item.cfopNatureza || item.cfop || '',
+    tabelaCtb: item.tabelaCtb || '',
+    valorPrincipal: toNumber(item.valorPrincipal),
+    inssRetid: toNumber(item.inssRetid),
+    issRetid: toNumber(item.issRetid),
+    pisRetid: toNumber(item.pisRetid),
+    cofinsRetid: toNumber(item.cofinsRetid),
+    csRetid: toNumber(item.csRetid),
+    irRetid: toNumber(item.irRetid),
+    valorLiquido: toNumber(item.valorLiquido)
+  };
+
+  // Aplica mapeamento automático baseado na natureza, se faltar cfopNatureza/tabelaCtb
+  if (normalized.natureza) {
+    try {
+      const naturezaMapping = findNaturezaMapping(normalized.natureza);
+      if (naturezaMapping) {
+        if (!normalized.cfopNatureza) {
+          normalized.cfopNatureza = naturezaMapping.cfop || normalized.cfop;
+        }
+        if (!normalized.tabelaCtb) {
+          normalized.tabelaCtb = naturezaMapping.tabelaCtb || '';
+        }
+      }
+    } catch (e) {
+      // mapeamento opcional
+    }
+  }
+
+  return normalized;
+};
+
+// Converte valores numéricos com segurança
+const toNumber = (value) => {
+  if (value === null || value === undefined || value === '') return 0;
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const normalized = value.replace(/\./g, '').replace(',', '.');
+    const parsed = parseFloat(normalized);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+};
+
+// Função para processar arquivos PDF
+export const processPdfFile = async (file, onProgress, onComplete, onError) => {
+  try {
+    console.log(`Iniciando processamento do PDF: ${file.name}`);
+    
+    // Adiciona o PDF à fila de processamento
+    const queueId = addPdfToQueue(
+      file,
+      (id, status, message) => {
+        console.log(`PDF ${id}: ${status} - ${message}`);
+        if (onProgress) {
+          onProgress(id, status, message);
+        }
+      },
+      (id, message, responseData) => {
+        console.log(`PDF ${id} processado: ${message}`);
+        if (onComplete) {
+          onComplete(id, message, responseData);
+        }
+      },
+      (id, errorMessage) => {
+        console.error(`Erro no PDF ${id}: ${errorMessage}`);
+        if (onError) {
+          onError(id, errorMessage);
+        }
+      }
+    );
+
+    return {
+      success: true,
+      message: `PDF ${file.name} adicionado à fila de processamento`,
+      queueId: queueId
+    };
+
+  } catch (error) {
+    console.error('Erro ao processar PDF:', error);
+    throw new Error(`Erro ao processar PDF: ${error.message}`);
+  }
+};
+
+// Função para obter status da fila de PDFs
+export const getPdfQueueStatus = () => {
+  return getQueueStatus();
+};
+
+// Função para limpar a fila de PDFs
+export const clearPdfQueue = () => {
+  return clearQueue();
 };

@@ -3,7 +3,7 @@ import { FileText, Settings, AlertCircle, CheckCircle, Database, X, Download, Pl
 import FileUploadComponent from './components/FileUpload';
 import DataTable from './components/DataTable';
 import CfopMappingGrid from './components/CfopMappingGrid';
-import { processExcelFile, processXmlFile, processCfopMappingFile, exportToExcel } from './services/fileProcessor';
+import { processExcelFile, processXmlFile, processCfopMappingFile, exportToExcel, processPdfFile, getPdfQueueStatus, clearPdfQueue, normalizeWebhookResponse } from './services/fileProcessor';
 import { Button } from './components/ui/button';
 import { getAllNaturezaMappings, hasNaturezaMapping, findNaturezaMapping } from './data/natureza-mapping';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, TableCaption } from './components/ui/table';
@@ -16,6 +16,10 @@ function App() {
   const [success, setSuccess] = useState(null);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [rawData, setRawData] = useState([]); // Dados brutos antes do processamento
+  const [pdfQueueStatus, setPdfQueueStatus] = useState({ total: 0, processing: false, pending: 0, completed: 0, failed: 0 });
+  const [pdfProcessingMessages, setPdfProcessingMessages] = useState([]);
+  const [pendingPdfs, setPendingPdfs] = useState([]);
+  const [pdfResults, setPdfResults] = useState([]);
 
   // Dados de exemplo da planilha de mapeamento CFOP
   const [cfopMappingData, setCfopMappingData] = useState([
@@ -69,6 +73,10 @@ function App() {
             const excelData = await processExcelFile(file);
             allData = [...allData, ...excelData];
           }
+        } else if (extension === 'pdf') {
+          // Adiciona PDF à lista de pendentes (não processa automaticamente)
+          setPendingPdfs(prev => [...prev, file]);
+          setSuccess(`PDF ${file.name} adicionado à lista de processamento`);
         }
       }
       
@@ -90,7 +98,7 @@ function App() {
 
   // Nova função para processar notas
   const handleProcessNotas = useCallback(async () => {
-    if (rawData.length === 0) {
+    if (rawData.length === 0 && pendingPdfs.length === 0) {
       setError('Nenhum dado para processar. Carregue arquivos primeiro.');
       return;
     }
@@ -100,8 +108,58 @@ function App() {
     setSuccess(null);
     
     try {
+      let allProcessedData = [...rawData];
+      
+      // Processa PDFs pendentes se houver
+      if (pendingPdfs.length > 0) {
+        setSuccess(`Processando ${pendingPdfs.length} PDFs...`);
+        
+        const pdfPromises = pendingPdfs.map(async (pdfFile) => {
+          return new Promise((resolve, reject) => {
+            processPdfFile(
+              pdfFile,
+              (id, status, message) => {
+                setPdfProcessingMessages(prev => [...prev, { id, status, message, timestamp: new Date().toISOString() }]);
+                setPdfQueueStatus(getPdfQueueStatus());
+              },
+              (id, message, responseData) => {
+                setPdfProcessingMessages(prev => [...prev, { id, status: 'completed', message, timestamp: new Date().toISOString() }]);
+                setPdfQueueStatus(getPdfQueueStatus());
+                const normalized = normalizeWebhookResponse(responseData) || [];
+                resolve({ success: true, message, file: pdfFile, data: normalized });
+              },
+              (id, errorMessage) => {
+                setPdfProcessingMessages(prev => [...prev, { id, status: 'error', message: errorMessage, timestamp: new Date().toISOString() }]);
+                setPdfQueueStatus(getPdfQueueStatus());
+                reject(new Error(errorMessage));
+              }
+            );
+          });
+        });
+        
+        try {
+          const pdfResults = await Promise.all(pdfPromises);
+          setPdfResults(pdfResults);
+          
+          // Processa os dados retornados dos PDFs
+          pdfResults.forEach(result => {
+            if (result.success && result.data) {
+              // Se o resultado contém dados estruturados, adiciona aos dados processados
+              if (Array.isArray(result.data)) {
+                allProcessedData = [...allProcessedData, ...result.data];
+              }
+            }
+          });
+          
+          setSuccess(`${pdfResults.length} PDFs processados com sucesso!`);
+        } catch (pdfError) {
+          setError(`Erro ao processar PDFs: ${pdfError.message}`);
+          return;
+        }
+      }
+      
       // Aplica o mapeamento CFOP aos dados
-      const processedData = rawData.map(item => {
+      const processedData = allProcessedData.map(item => {
         // Prioriza o mapeamento de natureza (mais específico)
         let finalTabelaCtb = item.tabelaCtb || '';
         let finalContaContabil = '';
@@ -131,13 +189,16 @@ function App() {
       setNotasData(processedData);
       setSuccess(`${processedData.length} notas fiscais processadas e analisadas com sucesso!`);
       
+      // Limpa PDFs pendentes após processamento
+      setPendingPdfs([]);
+      
     } catch (error) {
       setError(`Erro ao processar notas: ${error.message}`);
       console.error('Erro:', error);
     } finally {
       setIsProcessing(false);
     }
-  }, [rawData, cfopMapping]);
+  }, [rawData, cfopMapping, pendingPdfs]);
 
 
   // Função para exportar dados
@@ -159,6 +220,10 @@ function App() {
       setNotasData([]);
       setRawData([]);
       setCfopMapping({});
+      setPendingPdfs([]);
+      setPdfResults([]);
+      setPdfQueueStatus({ total: 0, processing: false, pending: 0, completed: 0, failed: 0 });
+      setPdfProcessingMessages([]);
       setError(null);
       setSuccess(null);
       
@@ -361,7 +426,7 @@ function App() {
               )}
 
               {/* Botão Processar Notas */}
-              {rawData.length > 0 && (
+              {(rawData.length > 0 || pendingPdfs.length > 0) && (
                 <div className="mt-4">
                   <Button
                     onClick={handleProcessNotas}
@@ -369,10 +434,13 @@ function App() {
                     className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-md transition-colors"
                   >
                     <Play className="h-5 w-5 mr-2" />
-                    {isProcessing ? 'Processando...' : `Processar ${rawData.length} Notas`}
+                    {isProcessing ? 'Processando...' : `Processar ${rawData.length} Notas${pendingPdfs.length > 0 ? ` + ${pendingPdfs.length} PDFs` : ''}`}
                   </Button>
                   <p className="text-sm text-muted-foreground mt-2 text-center">
-                    Clique para analisar e aplicar mapeamentos automáticos nas notas carregadas
+                    {pendingPdfs.length > 0 
+                      ? `Processar ${rawData.length} notas + ${pendingPdfs.length} PDFs via webhook`
+                      : 'Clique para analisar e aplicar mapeamentos automáticos nas notas carregadas'
+                    }
                   </p>
                 </div>
               )}
@@ -501,6 +569,106 @@ function App() {
             </section>
           )}
 
+          {/* PDFs Pendentes Section */}
+          {pendingPdfs.length > 0 && (
+            <section>
+              <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+                <div className="flex items-center space-x-2 mb-4">
+                  <FileText className="h-5 w-5 text-orange-600" />
+                  <h2 className="text-xl font-semibold text-foreground">PDFs Aguardando Processamento</h2>
+                </div>
+                
+                <div className="space-y-2">
+                  {pendingPdfs.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-orange-50 rounded-md border border-orange-200">
+                      <div className="flex items-center space-x-3">
+                        <FileText className="h-5 w-5 text-orange-600" />
+                        <div>
+                          <p className="text-sm font-medium">{file.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(file.size / 1024).toFixed(1)} KB
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-xs text-orange-600 font-medium">Aguardando</span>
+                    </div>
+                  ))}
+                </div>
+                
+                <p className="text-sm text-muted-foreground mt-3">
+                  {pendingPdfs.length} PDF(s) aguardando processamento via webhook. Clique em "Processar" para enviar.
+                </p>
+              </div>
+            </section>
+          )}
+
+          {/* PDF Queue Status Section */}
+          {(pdfQueueStatus.total > 0 || pdfProcessingMessages.length > 0) && (
+            <section>
+              <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Database className="h-5 w-5 text-blue-600" />
+                    <h2 className="text-xl font-semibold text-foreground">Status da Fila de PDFs</h2>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      clearPdfQueue();
+                      setPdfQueueStatus({ total: 0, processing: false, pending: 0, completed: 0, failed: 0 });
+                      setPdfProcessingMessages([]);
+                    }}
+                  >
+                    Limpar Fila
+                  </Button>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                  <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
+                    <p className="text-sm font-medium text-blue-800">Total</p>
+                    <p className="text-xl font-bold text-blue-900">{pdfQueueStatus.total}</p>
+                  </div>
+                  <div className="p-3 bg-yellow-50 rounded-md border border-yellow-200">
+                    <p className="text-sm font-medium text-yellow-800">Pendentes</p>
+                    <p className="text-xl font-bold text-yellow-900">{pdfQueueStatus.pending}</p>
+                  </div>
+                  <div className="p-3 bg-green-50 rounded-md border border-green-200">
+                    <p className="text-sm font-medium text-green-800">Concluídos</p>
+                    <p className="text-xl font-bold text-green-900">{pdfQueueStatus.completed}</p>
+                  </div>
+                  <div className="p-3 bg-red-50 rounded-md border border-red-200">
+                    <p className="text-sm font-medium text-red-800">Falharam</p>
+                    <p className="text-xl font-bold text-red-900">{pdfQueueStatus.failed}</p>
+                  </div>
+                  <div className="p-3 bg-purple-50 rounded-md border border-purple-200">
+                    <p className="text-sm font-medium text-purple-800">Processando</p>
+                    <p className="text-xl font-bold text-purple-900">{pdfQueueStatus.processing ? 'Sim' : 'Não'}</p>
+                  </div>
+                </div>
+
+                {pdfProcessingMessages.length > 0 && (
+                  <div className="mt-4">
+                    <h3 className="text-sm font-medium text-foreground mb-2">Log de Processamento</h3>
+                    <div className="max-h-40 overflow-y-auto space-y-1">
+                      {pdfProcessingMessages.slice(-10).map((msg, index) => (
+                        <div key={index} className={`text-xs p-2 rounded ${
+                          msg.status === 'completed' ? 'bg-green-50 text-green-800' :
+                          msg.status === 'error' ? 'bg-red-50 text-red-800' :
+                          msg.status === 'processing' ? 'bg-blue-50 text-blue-800' :
+                          'bg-yellow-50 text-yellow-800'
+                        }`}>
+                          <span className="font-mono text-xs">{new Date(msg.timestamp).toLocaleTimeString()}</span>
+                          <span className="ml-2">{msg.message}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
           {/* Data Table Section */}
           {notasData.length > 0 && (
             <section>
@@ -533,7 +701,7 @@ function App() {
                     <ul className="space-y-1 ml-4">
                       <li>• Arraste e solte arquivos XML (NFe/NFSe) ou Excel</li>
                       <li>• Suporte a múltiplos arquivos simultâneos</li>
-                      <li>• Formatos aceitos: .xml (NFe/NFSe), .xlsx, .xls</li>
+                      <li>• Formatos aceitos: .xml (NFe/NFSe), .xlsx, .xls, .pdf</li>
                       <li>• Após carregar, clique em "Processar notas" para análise</li>
                     </ul>
                   </div>
@@ -555,6 +723,17 @@ function App() {
                       <li>• Dados já mapeados com CFOP → CTB</li>
                     </ul>
                   </div>
+                </div>
+                
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h3 className="font-medium text-blue-900 mb-2">📄 Processamento de PDFs</h3>
+                  <ul className="space-y-1 text-sm text-blue-800">
+                    <li>• PDFs são enviados automaticamente para a fila de processamento</li>
+                    <li>• Enviados via POST para: https://dadosbi.monkeybranch.com.br/webhook/req</li>
+                    <li>• Sistema de fila com retry automático (até 3 tentativas)</li>
+                    <li>• Acompanhe o progresso na seção "Status da Fila de PDFs"</li>
+                    <li>• Log em tempo real do processamento</li>
+                  </ul>
                 </div>
               </div>
             </section>
